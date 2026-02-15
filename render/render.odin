@@ -50,13 +50,11 @@ begin_drawing :: proc(world: ^game.World, r : ^Renderer, input : ^i.Input) {
 
 	raylib.EndMode3D()
 
-	// --- 2D UI (selection box) ---
 	if input.is_dragging {
-		// normalize rect corners in screen space
-		x1 := input.drag_start_pos[0]
-		y1 := input.drag_start_pos[1]
-		x2 := input.drag_end_pos[0]
-		y2 := input.drag_end_pos[1]
+		x1 := input.drag_start_pos.x
+		y1 := input.drag_start_pos.y
+		x2 := input.drag_end_pos.x
+		y2 := input.drag_end_pos.y
 
 		min_x := math.min(x1, x2)
 		min_y := math.min(y1, y2)
