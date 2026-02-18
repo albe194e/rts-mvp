@@ -29,6 +29,8 @@ init :: proc(r : ^Renderer) {
 	r.camera.c.projection = .PERSPECTIVE
 	r.camera.sensitivity = 5
 
+	init_gui()
+
 }
 
 begin_frame :: proc() {
@@ -82,6 +84,7 @@ begin_drawing :: proc(world: ^game.World, r : ^Renderer, input : ^i.Input) {
 	raylib.EndMode3D()
 
 	// --- 2D world --- \\
+	update_gui()
 	if input.is_dragging {
 		x1 := input.drag_start_pos.x
 		y1 := input.drag_start_pos.y
