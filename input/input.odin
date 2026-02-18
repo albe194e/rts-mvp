@@ -41,7 +41,6 @@ update_input :: proc (world : ^game.World, ray : raylib.Ray, mouse_pos : [2]f32,
 		hit = raylib.GetRayCollisionQuad(ray, p1, p2, p3, p4)
 	}
 
-	// --- Drag state ---
 	drag_threshold_px : f32 = 6.0
 	drag_threshold2   : f32 = drag_threshold_px * drag_threshold_px
 
@@ -61,10 +60,8 @@ update_input :: proc (world : ^game.World, ray : raylib.Ray, mouse_pos : [2]f32,
 		}
 	}
 
-	// --- On release: click OR drag (mutually exclusive) ---
 	if left_click_release {
 		if input.is_dragging {
-			// Build normalized screen-rect
 			x1 := input.drag_start_pos[0]
 			y1 := input.drag_start_pos[1]
 			x2 := input.drag_end_pos[0]
@@ -74,35 +71,91 @@ update_input :: proc (world : ^game.World, ray : raylib.Ray, mouse_pos : [2]f32,
 			min_y := math.min(y1, y2)
 			max_x := math.max(x1, x2)
 			max_y := math.max(y1, y2)
-
-			// Box select: project each unit to screen, test in rect
+			
+			// --- Units --- \\\
 			for &u in world.units {
-				wp := raylib.Vector3{u.pos.x, u.pos.y, u.pos.z}
-				sp := raylib.GetWorldToScreen(wp, cam) // screen-space Vector2
+				if u.playerId != game.this_player_id { continue }
 
-				u.selected = point_in_rect(sp, min_x, min_y, max_x, max_y)
+				id := u.id;
+				tf := game.get_transform(world, id);
+				sel := game.get_selectable(world, id);
+
+				wp := raylib.Vector3{tf.pos.x, tf.pos.y, tf.pos.z}
+				sp := raylib.GetWorldToScreen(wp, cam)
+
+				sel.selected = point_in_rect(sp, min_x, min_y, max_x, max_y)
+			}
+			
+			// --- Buildings --- \\\
+			for &b in world.buildings {
+				if b.playerId != game.this_player_id { continue }
+				
+				id := b.id;
+				tf := game.get_transform(world, id);
+				sel := game.get_selectable(world, id);
+
+				wp := raylib.Vector3{tf.pos.x, tf.pos.y, tf.pos.z}
+				sp := raylib.GetWorldToScreen(wp, cam)
+
+				sel.selected = point_in_rect(sp, min_x, min_y, max_x, max_y)
 			}
 		} else {
-			// Click selection (ray pick) - run ONCE here
+
+			// --- Units --- \\\
 			for &u in world.units {
+				if u.playerId != game.this_player_id { continue }
+
+				id := u.id;
+				tf := game.get_transform(world, id);
+				sel := game.get_selectable(world, id);
+
 				collision := raylib.GetRayCollisionBox(
 					ray,
 					{{
-						u.pos.x - u.size.x / 2,
-						u.pos.y - u.size.y / 2,
-						u.pos.z - u.size.z / 2,
+						tf.pos.x - tf.size.x / 2,
+						tf.pos.y - tf.size.y / 2,
+						tf.pos.z - tf.size.z / 2,
 					},
 					{
-						u.pos.x + u.size.x / 2,
-						u.pos.y + u.size.y / 2,
-						u.pos.z + u.size.z / 2,
+						tf.pos.x + tf.size.x / 2,
+						tf.pos.y + tf.size.y / 2,
+						tf.pos.z + tf.size.z / 2,
 					}}
 				)
 
 				if collision.hit {
-					u.selected = true
+					sel.selected = true
 				} else {
-					u.selected = false
+					sel.selected = false
+				}
+			}
+			
+			// --- Buildings --- \\\
+			for &b in world.buildings {
+				if b.playerId != game.this_player_id { continue }
+
+				id := b.id;
+				tf := game.get_transform(world, id);
+				sel := game.get_selectable(world, id);
+
+				collision := raylib.GetRayCollisionBox(
+					ray,
+					{{
+						tf.pos.x - tf.size.x / 2,
+						tf.pos.y - tf.size.y / 2,
+						tf.pos.z - tf.size.z / 2,
+					},
+					{
+						tf.pos.x + tf.size.x / 2,
+						tf.pos.y + tf.size.y / 2,
+						tf.pos.z + tf.size.z / 2,
+					}}
+				)
+
+				if collision.hit {
+					sel.selected = true
+				} else {
+					sel.selected = false
 				}
 			}
 		}
@@ -110,10 +163,12 @@ update_input :: proc (world : ^game.World, ray : raylib.Ray, mouse_pos : [2]f32,
 		input.is_dragging = false
 	}
 
-	// --- Right click commands ---
 	if hit.hit {
 		for &u in world.units {
-			if u.selected {
+			id := u.id;
+			sel := game.get_selectable(world, id);
+
+			if sel.selected {
 				u.has_target = true
 				u.target_pos = hit.point
 			}

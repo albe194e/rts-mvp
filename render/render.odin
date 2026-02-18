@@ -4,9 +4,11 @@ import "vendor:raylib"
 import "../game"
 import i "../input"
 import "core:math"
+import "core:fmt"
 
 Renderer :: struct {
-	camera : Camera
+	camera : Camera,
+	window : Window
 }
 
 Camera :: struct {
@@ -15,7 +17,9 @@ Camera :: struct {
 }
 
 init :: proc(r : ^Renderer) {
-	raylib.InitWindow(1200, 900, "RTS")
+
+	init_window(&r.window)
+	raylib.InitWindow(r.window.screen_width, r.window.screen_height, fmt.caprint(r.window.title))
 	raylib.SetTargetFPS(60)
 
 	r.camera.c.position = { 0, 10, 10 }
@@ -24,6 +28,7 @@ init :: proc(r : ^Renderer) {
 	r.camera.c.fovy = 45
 	r.camera.c.projection = .PERSPECTIVE
 	r.camera.sensitivity = 5
+
 }
 
 begin_frame :: proc() {
@@ -32,24 +37,51 @@ begin_frame :: proc() {
 }
 
 begin_drawing :: proc(world: ^game.World, r : ^Renderer, input : ^i.Input) {
-	// --- 3D world ---
+	// --- 3D world --- \\
 	raylib.BeginMode3D(r.camera.c)
 	raylib.DrawGrid(100, 1)
 	raylib.DrawPlane({0,-0.5,0}, {100, 100}, {102, 137, 116, 255})
 
 	// Unit draw
 	for u in world.units {
-		pos := raylib.Vector3{u.pos.x, u.pos.y, u.pos.z}
+		id := u.id;
+		tf := game.get_transform(world, id);
+		sel := game.get_selectable(world, id);
+
+		pos := raylib.Vector3{tf.pos.x, tf.pos.y, tf.pos.z}
 		color := raylib.Color{255, 0, 255, 255}
 
-		if u.selected {
+		if sel.selected {
 			color = {0, 0, 0, 255}
 		}
-		raylib.DrawCube(pos, u.size.x, u.size.y, u.size.z, color)
+
+		raylib.DrawCube(pos, tf.size.x, tf.size.y, tf.size.z, color)
+	}
+
+	// Building draw
+	for b in world.buildings {
+		id := b.id;
+		tf := game.get_transform(world, id);
+		sel := game.get_selectable(world, id);
+
+		pos := raylib.Vector3{tf.pos.x, tf.pos.y, tf.pos.z}
+		color := raylib.Color{200, 0, 200, 255}
+
+		raylib.DrawCube(pos, tf.size.x, tf.size.y, tf.size.z, color)
+
+		if sel.selected {
+			plane_pos := raylib.Vector3{
+				tf.pos.x,
+				tf.pos.y - tf.size.y / 2,
+				tf.pos.z
+			}
+			raylib.DrawPlane(plane_pos, {tf.size.x + tf.size.x * 0.1, tf.size.z + tf.size.z * 0.1}, {0, 255, 0, 200})
+		}
 	}
 
 	raylib.EndMode3D()
 
+	// --- 2D world --- \\
 	if input.is_dragging {
 		x1 := input.drag_start_pos.x
 		y1 := input.drag_start_pos.y

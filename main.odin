@@ -5,29 +5,21 @@ import "render"
 import "game"
 import i "input"
 import "simulation"
+import "core:fmt"
+
+
 main :: proc() {
 
 	r : render.Renderer
 	render.init(&r)
 	defer render.shutdown()
 
-	world : game.World
-	world.units[0] = game.Unit{
-		pos = {0, 0, 0},
-		radius = 1,
-		size = {1, 1, 1},
-		speed = 1,
-	}
+	world : game.World;
+	game.init_world(&world);
 
-	world.units[1] = game.Unit{
-		pos = {2, 0, 2},
-		radius = 1,
-		size = {1, 1, 1},
-		speed = 1,
-	}
+	hardcode_entities(&world)
 
 	input : i.Input
-	
 
 	for !raylib.WindowShouldClose() {
 
@@ -35,20 +27,64 @@ main :: proc() {
 		mouse_pos := raylib.GetMousePosition();
 		ray := raylib.GetScreenToWorldRay(mouse_pos, r.camera.c)
 
-		
 		i.update_input(&world, ray, mouse_pos, &input, r.camera.c)
 		simulation.update(&world, dt)
 
 		render.update_camera(&r, dt)
 
-		// --- UPDATE (simulation goes here) ---
-		// sim_update(world)
-
-		// --- RENDER ---
 		render.begin_frame()
 			render.begin_drawing(&world, &r, &input)
 
 
 		render.end_frame()
 	}
+}
+
+
+hardcode_entities :: proc (w : ^game.World) {
+
+	append(&w.players, game.Player{
+		id = 1
+	})
+	append(&w.players, game.Player{
+		id = 2
+	})
+
+	// Player 1
+	game.spawn_unit(
+		w,
+		{2,0,0},
+		1,
+		.WORKER,
+		1,
+		game.this_player_id
+	)
+
+	game.spawn_building(
+		w,
+		{2, 0, 2},
+		1,
+		.CITY,
+		{2,2},
+		game.this_player_id
+	)
+
+	// Player 2
+	game.spawn_unit(
+		w,
+		{-2,0,0},
+		1,
+		.WORKER,
+		1,
+		2
+	)
+
+	game.spawn_building(
+		w,
+		{-2, 0, 2},
+		1,
+		.CITY,
+		{2,2},
+		2
+	)
 }
